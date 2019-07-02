@@ -1,0 +1,66 @@
+#!/bin/bash
+# TrustSphere de-id
+# author - Tom Butler 23/05/2018  Version 0.1
+
+DOMAIN=@citi.com
+STAGE=/usr/src/anon/stage/
+start=`date +%M`
+
+ls $STAGE > lof.txt
+echo "Building a list of llc files"
+input="lof.txt"
+while IFS= read -r line
+do
+	egrep -o "\b[a-zA-Z0-9.-]+$DOMAIN" $STAGE$line |cut -f1 -d'@'| tr '[:upper:]' '[:lower:]'|sort|uniq >>build.txt
+	echo "reading $line file and preparing names"
+done < "$input"
+sort -f -u build.txt  > names.txt
+ncount=`cat names.txt |wc -w`
+echo "sorting "$ncount" names"
+echo "creating anonymization table"
+input="names.txt"
+while IFS= read -r line	
+do
+	# using the Ceaser Cipher
+  echo "$line"| tr '[a-z]' '[x-za-w]' >>re-id.txt
+done < "$input"
+#insure the space between " " is a tab
+paste  -d"	" names.txt re-id.txt > keyfile.txt
+lofcount=`cat lof.txt |wc -w`
+count=0
+input="lof.txt"
+
+while IFS= read -r line
+do
+	let count=count+1
+	echo "Processing "$count" of "$lofcount" llc files"
+	input="keyfile.txt"
+	LLCFILE=$line
+		while IFS= read -r line
+		do
+			INDEX=' '
+			VALUE=' '
+			INDEX=`echo "$line"|awk '{print $1;}'`
+			VALUE=`echo "$line"|awk '{print $2;}'`
+			# carry out anonamyzation on all llc files - one file at a time
+			
+			echo  "changing "$INDEX$DOMAIN" to "$VALUE$DOMAIN " on " $LLCFILE
+			#comment out the next line if you need to test without S&R
+			sed -i -e 's/'"$INDEX$DOMAIN"'/'"$VALUE$DOMAIN"'/gi' $STAGE$LLCFILE
+			INDEX=' '
+			VALUE=' '
+		done < "$input"
+done < "$input"	
+#cleanup
+rm -f re-id.txt
+rm -f build.txt
+rm -f lof.txt
+rm -f names.txt
+cd $STAGE
+rm -f sed*
+cd ../
+
+end=`date +%M`
+runtime=$((end-start))
+echo "Time taken " $runtime "minutes"
+echo "The anonymization keyfile.txt has been created in this directory"
