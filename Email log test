@@ -1,0 +1,9 @@
+Open a PowerShell as Admin
+And copy the lines below into the shell window and execute them.
+You will be prompted for the username and password created for the Transaction role.
+
+
+$UserCredential = Get-Credential 
+$session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $UserCredential -Authentication Basic -AllowRedirection 
+Import-PSSession -Session $session -AllowClobber -CommandName get-MessageTrace 
+Get-MessageTrace -SenderAddress <email@company.com>
